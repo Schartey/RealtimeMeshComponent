@@ -128,12 +128,21 @@ namespace RealtimeMesh
 					FRealtimeMeshBatchCreationParams Params
 					{
 						[this](const TSharedRef<FRenderResource>& Resource) { InUseBuffers.Add(Resource); },
-						[&MeshBatch]()-> FMeshBatch& {
+						[this,&MeshBatch]()-> FMeshBatch& {
 							MeshBatch = FMeshBatch();
+							if (RuntimeVirtualTextureMaterialTypes.Num() > 0) {
+								MeshBatch.bRenderToVirtualTexture = true;
+							}
 							return MeshBatch;
 						},
 #if RHI_RAYTRACING
-						[&PDI](const FMeshBatch& Batch, float MinScreenSize, const FRayTracingGeometry*) { PDI->DrawMesh(Batch, MinScreenSize); },
+						[this,&PDI](FMeshBatch& Batch, float MinScreenSize, const FRayTracingGeometry*) {
+							for(ERuntimeVirtualTextureMaterialType Type : RuntimeVirtualTextureMaterialTypes) {
+
+								Batch.RuntimeVirtualTextureMaterialType = static_cast<uint32>(Type);
+								PDI->DrawMesh(Batch, MinScreenSize);
+							}
+						},
 #else
 							[&PDI](const FMeshBatch& Batch, float MinScreenSize) { PDI->DrawMesh(Batch, MinScreenSize); },					
 #endif
